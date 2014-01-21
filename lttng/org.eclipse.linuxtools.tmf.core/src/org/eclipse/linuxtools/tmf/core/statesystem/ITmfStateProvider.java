@@ -57,6 +57,20 @@ public interface ITmfStateProvider {
     long getStartTime();
 
     /**
+     * Set granularity of a provider, allows to have a meta checkpointing for indexes
+     * @param granularity the granularity
+     * @since 3.0
+     */
+    void setGranularity(long granularity);
+
+    /**
+     * Get granularity of a provider, allows to have a meta checkpointing for indexes
+     * @return the granularity
+     * @since 3.0
+     */
+    long getGranularity();
+
+    /**
      * Method for the input plugin to specify which type of events it expects.
      * This will guarantee that all events it receives via processEvent() are
      * indeed of the given type, so it should be safe to cast to that type.
@@ -116,4 +130,5 @@ public interface ITmfStateProvider {
      * and that it should close its current history.
      */
     void dispose();
+
 }

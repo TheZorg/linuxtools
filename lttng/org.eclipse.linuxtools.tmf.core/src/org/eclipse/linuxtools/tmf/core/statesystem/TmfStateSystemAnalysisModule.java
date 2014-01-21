@@ -276,10 +276,12 @@ public abstract class TmfStateSystemAnalysisModule extends TmfAbstractAnalysisMo
         /* Size of the blocking queue to use when building a state history */
         final int QUEUE_SIZE = 10000;
 
-        final long granularity = 50000;
+        final long granularity = 65536;
+        provider.setGranularity(granularity);
 
         /* 2 */
         IStateHistoryBackend realBackend = null;
+
         try {
             realBackend = new ThreadedHistoryTreeBackend(htPartialFile,
                     provider.getStartTime(), provider.getVersion(), QUEUE_SIZE);

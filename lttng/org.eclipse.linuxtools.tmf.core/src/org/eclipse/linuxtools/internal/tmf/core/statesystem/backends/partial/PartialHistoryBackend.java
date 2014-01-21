@@ -14,6 +14,7 @@ package org.eclipse.linuxtools.internal.tmf.core.statesystem.backends.partial;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -55,6 +56,8 @@ import org.eclipse.linuxtools.tmf.core.trace.ITmfTrace;
  */
 public class PartialHistoryBackend implements IStateHistoryBackend {
 
+    private boolean[] fQuarksAdded;
+
     /**
      * A partial history needs the state input plugin to re-generate state
      * between checkpoints.
@@ -77,6 +80,7 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
     private final CountDownLatch checkpointsReady = new CountDownLatch(1);
 
     private final long granularity;
+    private final long fCheckpointQuark;
 
     private long latestTime;
 
@@ -112,9 +116,15 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
         this.innerHistory = realBackend;
         this.granularity = granularity;
 
+        fCheckpointQuark = partialSS.getQuarkAbsoluteAndAdd(AbstractTmfStateProvider.CHECKPOINT_NAME);
+
         latestTime = startTime;
 
+        fQuarksAdded = new boolean[partialSS.getNbAttributes()];
+        Arrays.fill(fQuarksAdded, Boolean.TRUE);
+
         registerCheckpoints();
+
     }
 
     private void registerCheckpoints() {
@@ -136,7 +146,11 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
     @Override
     public void insertPastState(long stateStartTime, long stateEndTime,
             int quark, ITmfStateValue value) throws TimeRangeException {
-        waitForCheckpoints();
+        if( quark == fCheckpointQuark){
+            fQuarksAdded = new boolean[partialSS.getNbAttributes()];
+            Arrays.fill(fQuarksAdded, Boolean.TRUE);
+            // maybe return here
+        }
 
         /* Update the latest time */
         if (stateEndTime > latestTime) {
@@ -146,12 +160,9 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
         /*
          * Check if the interval intersects the previous checkpoint. If so,
          * insert it in the real history back-end.
-         *
-         * FIXME since intervals are inserted in order of rank, we could avoid
-         * doing a map lookup every time here (just compare with the known
-         * previous one).
          */
-        if (stateStartTime <= checkpoints.floorKey(stateEndTime)) {
+        if (fQuarksAdded[quark]) {
+            fQuarksAdded[quark] = false;
             innerHistory.insertPastState(stateStartTime, stateEndTime, quark, value);
         }
     }

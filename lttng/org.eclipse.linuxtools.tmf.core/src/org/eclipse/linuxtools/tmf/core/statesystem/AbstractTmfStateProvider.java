@@ -17,6 +17,10 @@ import java.util.concurrent.BlockingQueue;
 
 import org.eclipse.linuxtools.statesystem.core.ITmfStateSystem;
 import org.eclipse.linuxtools.statesystem.core.ITmfStateSystemBuilder;
+import org.eclipse.linuxtools.statesystem.core.exceptions.AttributeNotFoundException;
+import org.eclipse.linuxtools.statesystem.core.exceptions.StateValueTypeException;
+import org.eclipse.linuxtools.statesystem.core.exceptions.TimeRangeException;
+import org.eclipse.linuxtools.statesystem.core.statevalue.TmfStateValue;
 import org.eclipse.linuxtools.tmf.core.event.ITmfEvent;
 import org.eclipse.linuxtools.tmf.core.event.TmfEvent;
 import org.eclipse.linuxtools.tmf.core.timestamp.ITmfTimestamp;
@@ -39,15 +43,48 @@ public abstract class AbstractTmfStateProvider implements ITmfStateProvider {
 
     private static final int DEFAULT_EVENTS_QUEUE_SIZE = 10000;
 
+    /**
+     * The name of the attribute that will flip every n events
+     * @since 3.0
+     */
+    public static final String CHECKPOINT_NAME = "Checkpoint"; //$NON-NLS-1$
+
     private final ITmfTrace trace;
     private final Class<? extends ITmfEvent> eventType;
     private final BlockingQueue<ITmfEvent> eventsQueue;
     private final Thread eventHandlerThread;
 
+    private long fGranularity;
     private boolean ssAssigned;
 
     /** State system in which to insert the state changes */
     protected ITmfStateSystemBuilder ss = null;
+
+    /**
+     * Instantiate a new state provider plugin.
+     *
+     * @param trace
+     *            The trace
+     * @param eventType
+     *            The specific class for the event type that will be used within
+     *            the subclass
+     * @param id
+     *            Name given to this state change input, internally used
+     * @param granularity
+     *            the amount of events to put between a meta state called
+     *            checkpoints, must be a power of 2
+     */
+    public AbstractTmfStateProvider(ITmfTrace trace,
+            Class<? extends ITmfEvent> eventType, String id, long granularity) {
+        fGranularity = granularity;
+        this.trace = trace;
+        this.eventType = eventType;
+        eventsQueue = new ArrayBlockingQueue<>(DEFAULT_EVENTS_QUEUE_SIZE);
+        ssAssigned = false;
+
+        String id2 = (id == null ? "Unamed" : id); //$NON-NLS-1$
+        eventHandlerThread = new Thread(new EventProcessor(), id2 + " Event Handler"); //$NON-NLS-1$
+    }
 
     /**
      * Instantiate a new state provider plugin.
@@ -62,13 +99,7 @@ public abstract class AbstractTmfStateProvider implements ITmfStateProvider {
      */
     public AbstractTmfStateProvider(ITmfTrace trace,
             Class<? extends ITmfEvent> eventType, String id) {
-        this.trace = trace;
-        this.eventType = eventType;
-        eventsQueue = new ArrayBlockingQueue<>(DEFAULT_EVENTS_QUEUE_SIZE);
-        ssAssigned = false;
-
-        String id2 = (id == null ? "Unamed" : id); //$NON-NLS-1$
-        eventHandlerThread = new Thread(new EventProcessor(), id2 + " Event Handler"); //$NON-NLS-1$
+        this(trace, eventType, id, 1);
     }
 
     @Override
@@ -179,6 +210,7 @@ public abstract class AbstractTmfStateProvider implements ITmfStateProvider {
     private class EventProcessor implements Runnable {
 
         private ITmfEvent currentEvent;
+        private long rank = 0;
 
         @Override
         public void run() {
@@ -202,7 +234,18 @@ public abstract class AbstractTmfStateProvider implements ITmfStateProvider {
 
                     /* Make sure this is an event the sub-class can process */
                     if (eventType.isInstance(event) && event.getType() != null) {
-                        eventHandle(event);
+                        if ((rank & (fGranularity - 1)) == 0) {
+                            ITmfStateSystemBuilder ssb = (ITmfStateSystemBuilder) getAssignedStateSystem();
+                            int quark = ssb.getQuarkAbsoluteAndAdd(CHECKPOINT_NAME);
+                            try {
+                                ssb.modifyAttribute(event.getTimestamp().normalize(0, ITmfTimestamp.NANOSECOND_SCALE).getValue(), TmfStateValue.newValueInt((int) (rank >> Long.numberOfTrailingZeros(fGranularity))), quark);
+                            } catch (TimeRangeException | AttributeNotFoundException | StateValueTypeException e) {
+                                e.printStackTrace();
+                            }
+                        } else {
+                            eventHandle(event);
+                        }
+                        rank++;
                     }
                     event = eventsQueue.take();
                 }
@@ -220,6 +263,23 @@ public abstract class AbstractTmfStateProvider implements ITmfStateProvider {
                     currentEvent.getTimestamp().normalize(0, ITmfTimestamp.NANOSECOND_SCALE).getValue();
             ss.closeHistory(endTime);
         }
+    }
+
+    /**
+     * @since 3.0
+     */
+    @Override
+    public long getGranularity() {
+        return fGranularity;
+    }
+
+    /**
+     * @since 3.0
+     */
+    @Override
+    public void setGranularity(long granularity) {
+        fGranularity = granularity;
+
     }
 
     // ------------------------------------------------------------------------
