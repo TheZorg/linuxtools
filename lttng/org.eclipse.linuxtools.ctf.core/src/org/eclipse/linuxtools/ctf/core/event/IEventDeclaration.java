@@ -71,8 +71,9 @@ public interface IEventDeclaration {
      * Gets the id of an event declaration
      *
      * @return The EventDeclaration ID
+     * @since 3.0
      */
-    Long getId();
+    int getId();
 
     /**
      * Gets the {@link Stream} of an event declaration

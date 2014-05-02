@@ -36,15 +36,11 @@ import org.eclipse.linuxtools.ctf.core.trace.StreamInputReader;
  */
 public class EventDeclaration implements IEventDeclaration {
 
-    @NonNull private static final String FIELDS = "fields"; //$NON-NLS-1$
-
-    @NonNull private static final String CONTEXT = "context"; //$NON-NLS-1$
-
     /** Id of lost events */
-    public static final long LOST_EVENT_ID = -1L;
+    public static final int LOST_EVENT_ID = -1;
 
     /** Id of events when not set */
-    public static final long UNSET_EVENT_ID = -2L;
+    public static final int UNSET_EVENT_ID = -2;
 
     // ------------------------------------------------------------------------
     // Attributes
@@ -68,7 +64,7 @@ public class EventDeclaration implements IEventDeclaration {
     /**
      * Event id (can be null if only event in the stream).
      */
-    private Long fId = UNSET_EVENT_ID;
+    private int fId = UNSET_EVENT_ID;
 
     /**
      * Stream to which belongs this event.
@@ -97,10 +93,10 @@ public class EventDeclaration implements IEventDeclaration {
     @Override
     public EventDefinition createDefinition(StreamInputReader streamInputReader, @NonNull BitBuffer input, long timestamp) throws CTFReaderException {
         StructDeclaration streamEventContextDecl = streamInputReader.getStreamEventContextDecl();
-        StructDefinition streamEventContext = streamEventContextDecl != null ? streamEventContextDecl.createDefinition(null, LexicalScope.STREAM_EVENT_CONTEXT.toString(), input) : null;
+        StructDefinition streamEventContext = streamEventContextDecl != null ? streamEventContextDecl.createDefinition(null, LexicalScope.STREAM_EVENT_CONTEXT, input) : null;
         StructDefinition packetContext = streamInputReader.getPacketReader().getCurrentPacketEventHeader();
-        StructDefinition eventContext = fContext != null ? fContext.createDefinition(null, CONTEXT, input) : null;
-        StructDefinition eventPayload = fFields != null ? fFields.createDefinition(null, FIELDS, input) : null;
+        StructDefinition eventContext = fContext != null ? fContext.createDefinition(null, LexicalScope.CONTEXT, input) : null;
+        StructDefinition eventPayload = fFields != null ? fFields.createDefinition(null, LexicalScope.FIELDS, input) : null;
 
         // a bit lttng specific
         // CTF doesn't require a timestamp,
@@ -186,12 +182,24 @@ public class EventDeclaration implements IEventDeclaration {
      * @param id
      *            the id
      */
-    public void setId(long id) {
+    public void setId(int id) {
         fId = id;
     }
-
+    /**
+     * Sets the id of an event declaration
+     *
+     * @param id
+     *            the id
+     * @throws CTFReaderException id too large
+     */
+    public void setId(long id) throws CTFReaderException {
+        if( id > Integer.MAX_VALUE ) {
+            throw new CTFReaderException("Id larger than int.maxvalue, id: " +id ); //$NON-NLS-1$
+        }
+        fId = (int)id;
+    }
     @Override
-    public Long getId() {
+    public int getId() {
         return fId;
     }
 
@@ -244,7 +252,7 @@ public class EventDeclaration implements IEventDeclaration {
      * @return is the id set?
      */
     public boolean idIsSet() {
-        return (fId != null && fId != UNSET_EVENT_ID);
+        return (fId != UNSET_EVENT_ID);
     }
 
     /**
@@ -324,11 +332,7 @@ public class EventDeclaration implements IEventDeclaration {
         } else if (!fFields.equals(other.fFields)) {
             return false;
         }
-        if (fId == null) {
-            if (other.fId != null) {
-                return false;
-            }
-        } else if (!fId.equals(other.fId)) {
+        if (fId != (other.fId)) {
             return false;
         }
         if (fName == null) {
@@ -358,7 +362,7 @@ public class EventDeclaration implements IEventDeclaration {
         result = (prime * result)
                 + ((fContext == null) ? 0 : fContext.hashCode());
         result = (prime * result) + ((fFields == null) ? 0 : fFields.hashCode());
-        result = (prime * result) + ((fId == null) ? 0 : fId.hashCode());
+        result = (prime * result) + fId;
         result = (prime * result) + ((fName == null) ? 0 : fName.hashCode());
         result = (prime * result) + ((fStream == null) ? 0 : fStream.hashCode());
         result = (prime * result) + fCustomAttributes.hashCode();

@@ -15,24 +15,28 @@ package org.eclipse.linuxtools.ctf.core.event.types;
 import java.util.List;
 
 import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.linuxtools.ctf.core.event.scope.IDefinitionScope;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
 /**
- * A CTF sequence definition (a fixed-size array).
+ * A CTF array definition
  *
- * An array where the size is fixed but declared in the trace, unlike array
- * where it is declared with a literal
+ * Arrays are fixed-length. Their length is declared in the type declaration
+ * within the meta-data. They contain an array of "inner type" elements, which
+ * can refer to any type not containing the type of the array being declared (no
+ * circular dependency). The length is the number of elements in an array.
  *
  * @version 1.0
  * @author Matthew Khouzam
  * @author Simon Marchi
+ * @since 3.0
  */
-public final class SequenceDefinition extends Definition {
-
-    // TODO: investigate merging with arraydefinition
+@NonNullByDefault
+public final class CompoundDefinition extends ArrayDefinition {
 
     // ------------------------------------------------------------------------
     // Attributes
@@ -54,73 +58,85 @@ public final class SequenceDefinition extends Definition {
      * @param fieldName
      *            the field name
      * @param definitions
-     *            Definitions
+     *            the content of the array
      * @since 3.0
      */
-    public SequenceDefinition(@NonNull SequenceDeclaration declaration, IDefinitionScope definitionScope, @NonNull String fieldName, List<Definition> definitions) {
+    public CompoundDefinition(Declaration declaration,
+            @Nullable IDefinitionScope definitionScope,
+            String fieldName,
+            List<Definition> definitions) {
         super(declaration, definitionScope, fieldName);
-        fDefinitions = ImmutableList.copyOf(definitions);
+        @SuppressWarnings("null")
+        @NonNull
+        ImmutableList<Definition> list = ImmutableList.copyOf(definitions);
+        fDefinitions = list;
+
     }
 
     // ------------------------------------------------------------------------
     // Getters/Setters/Predicates
     // ------------------------------------------------------------------------
 
+    /**
+     * @since 3.0
+     */
     @Override
-    public SequenceDeclaration getDeclaration() {
-        return (SequenceDeclaration) super.getDeclaration();
+    public List<Definition> getDefinitions() {
+        return fDefinitions;
     }
 
-    /**
-     * The length of the sequence in number of elements so a sequence of 5
-     * GIANT_rediculous_long_ints is the same as a sequence of 5 bits. (5)
+    /*
+     * (non-Javadoc)
      *
-     * @return the length of the sequence
+     * @see
+     * org.eclipse.linuxtools.ctf.core.event.types.IArrayDefinition#getElem(int)
      */
-    public int getLength() {
-        return fDefinitions.size();
-    }
-
-    /**
-     * Get the element at i
-     *
-     * @param i
-     *            the index (cannot be negative)
-     * @return The element at I, if I &gt; length, null, if I &lt; 0, the method
-     *         throws an out of bounds exception
-     */
+    @Override
+    @Nullable
     public Definition getElem(int i) {
         if (i > fDefinitions.size()) {
             return null;
         }
+
         return fDefinitions.get(i);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see
+     * org.eclipse.linuxtools.ctf.core.event.types.IArrayDefinition#getDeclaration
+     * ()
+     */
+    @Override
+    public ArrayDeclaration getDeclaration() {
+        return (ArrayDeclaration) super.getDeclaration();
     }
 
     // ------------------------------------------------------------------------
     // Operations
     // ------------------------------------------------------------------------
 
+    /*
+     * (non-Javadoc)
+     *
+     * @see
+     * org.eclipse.linuxtools.ctf.core.event.types.IArrayDefinition#toString()
+     */
     @Override
     public String toString() {
         StringBuilder b = new StringBuilder();
 
-        if (getDeclaration().isString()) {
-            for (Definition def : fDefinitions) {
-                IntegerDefinition character = (IntegerDefinition) def;
-
-                if (character.getValue() == 0) {
-                    break;
-                }
-
-                b.append(character.toString());
-            }
-        } else {
+        {
             b.append('[');
             Joiner joiner = Joiner.on(", ").skipNulls(); //$NON-NLS-1$
             b.append(joiner.join(fDefinitions));
             b.append(']');
         }
 
-        return b.toString();
+        @SuppressWarnings("null")
+        @NonNull
+        String ret = b.toString();
+        return ret;
     }
 }

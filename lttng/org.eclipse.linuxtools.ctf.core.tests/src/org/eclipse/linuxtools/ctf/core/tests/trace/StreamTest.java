@@ -17,7 +17,7 @@ import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 import org.eclipse.linuxtools.ctf.core.event.IEventDeclaration;
@@ -143,7 +143,7 @@ public class StreamTest {
      */
     @Test
     public void testGetEvents() {
-        Map<Long, IEventDeclaration> result = fixture.getEvents();
+        List<IEventDeclaration> result = fixture.getEvents();
         assertNotNull(result);
     }
 

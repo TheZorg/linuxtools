@@ -19,6 +19,7 @@ import java.util.Map;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.linuxtools.ctf.core.event.io.BitBuffer;
 import org.eclipse.linuxtools.ctf.core.event.scope.IDefinitionScope;
+import org.eclipse.linuxtools.ctf.core.event.scope.LexicalScope;
 import org.eclipse.linuxtools.ctf.core.trace.CTFReaderException;
 
 import com.google.common.collect.ImmutableList;
@@ -176,6 +177,33 @@ public class StructDeclaration extends Declaration {
     }
 
     /**
+     * Accelerated struct definition creator if we already have the full lexical
+     * scope
+     *
+     * @param definitionScope
+     *            the definition scope, typically a trace or a stream input
+     * @param fieldScope
+     *            the lexical scope
+     * @param input
+     *            the input buffer
+     * @return a struct definition
+     * @throws CTFReaderException
+     *             if the buffer has insufficient data
+     * @since 3.0
+     */
+    @SuppressWarnings("null") //immutable list
+    public StructDefinition createDefinition(IDefinitionScope definitionScope,
+            LexicalScope fieldScope, @NonNull BitBuffer input) throws CTFReaderException {
+        alignRead(input);
+        final Definition[] myFields = new Definition[fFieldNames.size()];
+        StructDefinition structDefinition = new StructDefinition(this, definitionScope, fieldScope, fieldScope.getName(), fFieldNames, myFields);
+        for (int i = 0; i < fFieldNames.size(); i++) {
+            myFields[i] = fFieldDeclarations.get(i).createDefinition(structDefinition, fFieldNames.get(i), input);
+        }
+        return structDefinition;
+    }
+
+    /**
      * Add a field to the struct
      *
      * @param name
@@ -189,7 +217,7 @@ public class StructDeclaration extends Declaration {
         fFieldMap.put(name, declaration);
         fMaxAlign = Math.max(fMaxAlign, declaration.getAlignment());
         fFieldNames = ImmutableList.copyOf(fFieldMap.keySet());
-        fFieldDeclarations = ImmutableList.<IDeclaration>copyOf(fFieldMap.values());
+        fFieldDeclarations = ImmutableList.<IDeclaration> copyOf(fFieldMap.values());
     }
 
     @Override

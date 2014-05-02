@@ -19,13 +19,13 @@ import java.nio.ByteOrder;
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.linuxtools.ctf.core.event.io.BitBuffer;
+import org.eclipse.linuxtools.ctf.core.event.types.ArrayDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.Definition;
 import org.eclipse.linuxtools.ctf.core.event.types.Encoding;
 import org.eclipse.linuxtools.ctf.core.event.types.IDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.SequenceDeclaration;
-import org.eclipse.linuxtools.ctf.core.event.types.SequenceDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.StringDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.StructDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.StructDefinition;
@@ -48,14 +48,14 @@ public class SequenceDeclarationTest {
     @NonNull private static final String FIELD_NAME = "LengthName";
 
     private SequenceDeclaration fixture;
-    @NonNull private BitBuffer input = new BitBuffer();
+    @NonNull private BitBuffer input = BitBuffer.EMPTY_BITBUFFER;
 
+    @SuppressWarnings("null")
     @Before
     public void setUp() {
         fixture = new SequenceDeclaration(FIELD_NAME, new StringDeclaration());
         byte array[] = { 't', 'e', 's', 't', '\0', 't', 'h', 'i', 's', '\0' };
-        ByteBuffer byb = ByteBuffer.wrap(array);
-        input = new BitBuffer(byb);
+        input = new BitBuffer(ByteBuffer.wrap(array));
     }
 
     /**
@@ -98,7 +98,7 @@ public class SequenceDeclarationTest {
                                 FIELD_NAME,
                                 seqLen)
                 });
-        SequenceDefinition result = fixture.createDefinition(structDef, FIELD_NAME, input);
+        ArrayDefinition result = fixture.createDefinition(structDef, FIELD_NAME, input);
         assertNotNull(result);
     }
 

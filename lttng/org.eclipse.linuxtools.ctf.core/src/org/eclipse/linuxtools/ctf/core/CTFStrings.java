@@ -19,7 +19,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
  * names, etc.)
  *
  * @author Alexandre Montplaisir
- * @since 2.2
+ * @since 3.0
  */
 @SuppressWarnings("nls")
 @NonNullByDefault

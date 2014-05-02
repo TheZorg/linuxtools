@@ -24,9 +24,10 @@ import org.eclipse.linuxtools.ctf.core.event.io.BitBuffer;
 import org.eclipse.linuxtools.ctf.core.event.scope.IDefinitionScope;
 import org.eclipse.linuxtools.ctf.core.event.scope.LexicalScope;
 import org.eclipse.linuxtools.ctf.core.event.types.ArrayDeclaration;
-import org.eclipse.linuxtools.ctf.core.event.types.ArrayDefinition;
+import org.eclipse.linuxtools.ctf.core.event.types.CompoundDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.Definition;
 import org.eclipse.linuxtools.ctf.core.event.types.Encoding;
+import org.eclipse.linuxtools.ctf.core.event.types.ArrayDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.IDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDefinition;
@@ -39,7 +40,7 @@ import org.junit.Test;
 
 /**
  * The class <code>ArrayDefinitionTest</code> contains tests for the class
- * <code>{@link ArrayDefinition}</code>.
+ * <code>{@link CompoundDefinition}</code>.
  *
  * @author ematkho
  * @version $Revision: 1.0 $
@@ -88,7 +89,7 @@ public class ArrayDefinitionTest {
     private ArrayDefinition setUpDeclaration(IDeclaration decl,
             @NonNull List<Definition> defs) {
         ArrayDeclaration ad = new ArrayDeclaration(0, decl);
-        ArrayDefinition temp = new ArrayDefinition(ad, this.trace, "Testx", defs);
+        ArrayDefinition temp = new CompoundDefinition(ad, this.trace, "Testx", defs);
         return temp;
     }
 
@@ -121,11 +122,11 @@ public class ArrayDefinitionTest {
      */
     @Test
     public void testArrayDefinition_baseDeclaration() {
-        ArrayDeclaration declaration = charArrayFixture.getDeclaration();
+        ArrayDeclaration declaration = ((CompoundDefinition) charArrayFixture).getDeclaration();
         String fieldName = "";
 
         @SuppressWarnings("null")
-        ArrayDefinition result = new ArrayDefinition(declaration, this.trace, fieldName, Arrays.asList(new Definition[0]));
+        ArrayDefinition result = new CompoundDefinition(declaration, this.trace, fieldName, Arrays.asList(new Definition[0]));
         assertNotNull(result);
     }
 
@@ -141,7 +142,7 @@ public class ArrayDefinitionTest {
 
         String fieldName = "";
         @SuppressWarnings("null")
-        ArrayDefinition result = new ArrayDefinition(declaration, definitionScope, fieldName , Arrays.asList(new Definition[0]));
+        ArrayDefinition result = new CompoundDefinition(declaration, definitionScope, fieldName , Arrays.asList(new Definition[0]));
         assertNotNull(result);
     }
 
@@ -150,7 +151,7 @@ public class ArrayDefinitionTest {
      */
     @Test
     public void testGetDeclaration() {
-        ArrayDeclaration result = charArrayFixture.getDeclaration();
+        ArrayDeclaration result = ((CompoundDefinition) charArrayFixture).getDeclaration();
 
         assertNotNull(result);
     }
@@ -173,7 +174,7 @@ public class ArrayDefinitionTest {
     public void testGetElem_withDefs() {
         List<Definition> defs = createDefs();
         IDefinitionScope definitionScope = getDefinitionScope();
-        ArrayDefinition ad = new ArrayDefinition(charArrayFixture.getDeclaration(), definitionScope, "test", defs);
+        ArrayDefinition ad = new CompoundDefinition(((CompoundDefinition) charArrayFixture).getDeclaration(), definitionScope, "test", defs);
         int j = 1;
 
         Definition result = ad.getElem(j);
@@ -204,8 +205,9 @@ public class ArrayDefinitionTest {
      */
     @Test
     public void testRead_noDefs() throws CTFReaderException {
+        @SuppressWarnings("null")
         BitBuffer input = new BitBuffer(ByteBuffer.allocateDirect(128));
-        charArrayFixture.getDeclaration().createDefinition(null, "test", input);
+        ((CompoundDefinition) charArrayFixture).getDeclaration().createDefinition(null, "test", input);
     }
 
     /**

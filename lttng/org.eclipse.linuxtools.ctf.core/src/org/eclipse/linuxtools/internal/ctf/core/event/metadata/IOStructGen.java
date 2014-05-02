@@ -32,8 +32,12 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.linuxtools.ctf.core.event.CTFClock;
 import org.eclipse.linuxtools.ctf.core.event.types.ArrayDeclaration;
+import org.eclipse.linuxtools.ctf.core.event.types.Declaration;
 import org.eclipse.linuxtools.ctf.core.event.types.Encoding;
 import org.eclipse.linuxtools.ctf.core.event.types.EnumDeclaration;
+import org.eclipse.linuxtools.ctf.core.event.types.EventHeaderCompactDecl;
+import org.eclipse.linuxtools.ctf.core.event.types.EventHeaderLargeDecl;
+import org.eclipse.linuxtools.ctf.core.event.types.FixedSizeStructDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.FloatDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDeclaration;
@@ -698,11 +702,11 @@ public class IOStructGen {
             IDeclaration eventHeaderDecl = parseTypeSpecifierList(
                     typeSpecifier, null);
 
-            if (!(eventHeaderDecl instanceof StructDeclaration)) {
+            if (!(eventHeaderDecl instanceof StructDeclaration)&& !(eventHeaderDecl instanceof EventHeaderLargeDecl)&& !(eventHeaderDecl instanceof EventHeaderCompactDecl) ) {
                 throw new ParseException("event.header expects a struct"); //$NON-NLS-1$
             }
 
-            stream.setEventHeader((StructDeclaration) eventHeaderDecl);
+            stream.setEventHeader( (Declaration) eventHeaderDecl);
         } else if (left.equals(MetadataStrings.EVENT_CONTEXT)) {
             if (stream.isEventContextSet()) {
                 throw new ParseException("event.context already defined"); //$NON-NLS-1$
@@ -841,8 +845,13 @@ public class IOStructGen {
             }
 
             long id = getEventID(rightNode);
-
-            event.setId(id);
+            if (id > Integer.MAX_VALUE) {
+                throw new ParseException("id is greater than int.maxvalue, unsupported. id : " + id); //$NON-NLS-1$
+            }
+            if (id < 0) {
+                throw new ParseException("negative id, unsupported. id : " + id); //$NON-NLS-1$
+            }
+            event.setId((int) id);
         } else if (left.equals(MetadataStrings.STREAM_ID)) {
             if (event.streamIsSet()) {
                 throw new ParseException("stream id already defined"); //$NON-NLS-1$
@@ -1294,6 +1303,11 @@ public class IOStructGen {
             break;
         case CTFParser.STRUCT:
             declaration = parseStruct(firstChild);
+            if (EventHeaderCompactDecl.isA((StructDeclaration) declaration)) {
+                declaration = new EventHeaderCompactDecl();
+            } else if (EventHeaderLargeDecl.isA((StructDeclaration) declaration)) {
+                declaration = new EventHeaderLargeDecl();
+            }
             break;
         case CTFParser.VARIANT:
             declaration = parseVariant(firstChild);
@@ -1695,7 +1709,9 @@ public class IOStructGen {
                 throw new ParseException("struct with no name and no body"); //$NON-NLS-1$
             }
         }
-
+        if (FixedSizeStructDeclaration.canBeFlattened(structDeclaration)) {
+            return new FixedSizeStructDeclaration(structDeclaration);
+        }
         return structDeclaration;
     }
 
@@ -2759,7 +2775,9 @@ public class IOStructGen {
             }
 
             long intval = parseUnaryInteger(firstChild);
-
+            if (intval > Integer.MAX_VALUE) {
+                throw new ParseException("Event id larger than int.maxvalue, something is amiss"); //$NON-NLS-1$
+            }
             return intval;
         }
         throw new ParseException("invalid value for event id"); //$NON-NLS-1$

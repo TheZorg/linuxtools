@@ -175,7 +175,7 @@ public class StreamInputReader implements AutoCloseable {
      * @since 3.0
      */
     public Iterable<IEventDeclaration> getEventDeclarations() {
-        return ImmutableSet.copyOf(fStreamInput.getStream().getEvents().values());
+        return ImmutableSet.copyOf(fStreamInput.getStream().getEvents());
     }
 
     /**

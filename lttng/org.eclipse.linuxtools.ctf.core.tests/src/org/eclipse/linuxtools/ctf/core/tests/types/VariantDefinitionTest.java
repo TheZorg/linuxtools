@@ -30,7 +30,6 @@ import org.eclipse.linuxtools.ctf.core.event.types.EnumDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.FloatDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDefinition;
-import org.eclipse.linuxtools.ctf.core.event.types.SequenceDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.StringDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.StringDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.StructDeclaration;
@@ -111,7 +110,8 @@ public class VariantDefinitionTest {
         sDec.addField(VAR_FIELD_NAME, varDec);
         varDec.setTag(TAG_ID);
 
-        ByteBuffer byteBuffer = ByteBuffer.allocate(100);
+        @SuppressWarnings("null")
+        @NonNull ByteBuffer byteBuffer = ByteBuffer.allocate(100);
         BitBuffer bb = new BitBuffer(byteBuffer);
         byteBuffer.mark();
         byteBuffer.putInt(1);
@@ -259,7 +259,7 @@ public class VariantDefinitionTest {
      */
     @Test
     public void testLookupSequence_1() {
-        SequenceDefinition result = fixture.lookupSequence(ENUM_4);
+        ArrayDefinition result = fixture.lookupSequence(ENUM_4);
         assertNull(result);
     }
 
@@ -286,6 +286,7 @@ public class VariantDefinitionTest {
      */
     @Test
     public void testLookupVariant() {
+        @SuppressWarnings("null")
         VariantDefinition result = fixture.lookupVariant(ENUM_8);
         assertNull(result);
     }

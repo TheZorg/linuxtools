@@ -26,7 +26,6 @@ import org.eclipse.linuxtools.ctf.core.event.types.EnumDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.SequenceDeclaration;
-import org.eclipse.linuxtools.ctf.core.event.types.SequenceDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.StringDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.StringDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.StructDeclaration;
@@ -93,7 +92,8 @@ public class StructDefinitionTest {
         bytes[4] = 1;
         bytes[8] = 2;
         bytes[13] = 3;
-        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+        @SuppressWarnings("null")
+        @NonNull ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
         BitBuffer bb = new BitBuffer(byteBuffer);
         fixture = sDec.createDefinition(null, TEST_STRUCT_ID, bb);
         EnumDefinition eDef = tagDec.createDefinition(fixture, TAG_ID, bb);
@@ -187,7 +187,7 @@ public class StructDefinitionTest {
     @Test
     public void testLookupSequence() {
         String name = SEQUENCE_ID;
-        SequenceDefinition result = fixture.lookupSequence(name);
+        ArrayDefinition result = fixture.lookupSequence(name);
         assertNotNull(result);
     }
 

@@ -37,11 +37,11 @@ public class BitBufferTest {
      * Perform pre-test initialization.
      * @throws CTFReaderException An error that cannot happen (position is under 128)
      */
+    @SuppressWarnings("null")
     @Before
     public void setUp() throws CTFReaderException {
-        fixture = new BitBuffer(java.nio.ByteBuffer.allocateDirect(128));
+        fixture = new BitBuffer(ByteBuffer.allocateDirect(128));
         fixture.setByteOrder(ByteOrder.BIG_ENDIAN);
-        fixture.setByteBuffer(ByteBuffer.allocate(0));
         fixture.position(1);
     }
 
@@ -50,11 +50,11 @@ public class BitBufferTest {
      */
     @Test
     public void testBitBuffer() {
-        BitBuffer result = new BitBuffer();
+        BitBuffer result = BitBuffer.EMPTY_BITBUFFER;
 
         assertNotNull(result);
         assertEquals(0, result.position());
-        assertEquals(null, result.getByteBuffer());
+        assertNotNull(result.getByteBuffer());
     }
 
     /**
@@ -63,6 +63,9 @@ public class BitBufferTest {
     @Test
     public void testBitBuffer_fromByteBuffer() {
         ByteBuffer buf = ByteBuffer.allocate(0);
+        if( buf == null ) {
+            throw new IllegalStateException();
+        }
         BitBuffer result = new BitBuffer(buf);
 
         assertNotNull(result);
@@ -77,7 +80,7 @@ public class BitBufferTest {
         int length = 1;
         boolean result = fixture.canRead(length);
 
-        assertEquals(false, result);
+        assertEquals(true, result);
     }
 
     /**
@@ -96,15 +99,14 @@ public class BitBufferTest {
         ByteBuffer result = fixture.getByteBuffer();
 
         assertNotNull(result);
-        assertEquals("java.nio.HeapByteBuffer[pos=0 lim=0 cap=0]", result.toString());
-        assertEquals(false, result.isDirect());
-        assertEquals(true, result.hasArray());
-        assertEquals(0, result.arrayOffset());
-        assertEquals(0, result.limit());
-        assertEquals(0, result.remaining());
+        assertEquals("java.nio.DirectByteBuffer[pos=0 lim=128 cap=128]", result.toString());
+        assertEquals(true, result.isDirect());
+        assertEquals(false, result.hasArray());
+        assertEquals(128, result.limit());
+        assertEquals(128, result.remaining());
         assertEquals(0, result.position());
-        assertEquals(0, result.capacity());
-        assertEquals(false, result.hasRemaining());
+        assertEquals(128, result.capacity());
+        assertEquals(true, result.hasRemaining());
         assertEquals(false, result.isReadOnly());
     }
 
@@ -160,24 +162,6 @@ public class BitBufferTest {
     public void testSetPosition() throws CTFReaderException {
         int newPosition = 1;
         fixture.position(newPosition);
-    }
-
-    /**
-     * Run the void setByteBuffer(ByteBuffer) method test.
-     */
-    @Test
-    public void testSetByteBuffer() {
-        ByteBuffer buf = ByteBuffer.allocate(0);
-        fixture.setByteBuffer(buf);
-    }
-
-    /**
-     * Run the void setByteBuffer(ByteBuffer) method test.
-     */
-    @Test
-    public void testSetByteBuffer_null() {
-        ByteBuffer buf = null;
-        fixture.setByteBuffer(buf);
     }
 
     /**

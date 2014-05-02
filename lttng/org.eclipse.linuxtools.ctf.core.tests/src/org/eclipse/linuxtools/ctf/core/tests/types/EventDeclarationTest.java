@@ -161,7 +161,7 @@ public class EventDeclarationTest {
     public void testEquals_other3() {
         EventDeclaration obj = new EventDeclaration();
         obj.setContext(new StructDeclaration(1L));
-        obj.setId(1L);
+        obj.setId(1);
         obj.setFields(new StructDeclaration(1L));
 
         boolean result = fixture.equals(obj);
@@ -175,7 +175,7 @@ public class EventDeclarationTest {
     public void testEquals_other4() {
         EventDeclaration obj = new EventDeclaration();
         obj.setContext(new StructDeclaration(1L));
-        obj.setId(1L);
+        obj.setId(1);
         obj.setFields(new StructDeclaration(1L));
         obj.setName("");
 
@@ -217,7 +217,7 @@ public class EventDeclarationTest {
      */
     @Test
     public void testGetId() {
-        Long result = fixture.getId();
+        Integer result = fixture.getId();
         assertNotNull(result);
     }
 

@@ -115,7 +115,7 @@ public class SequenceDeclaration extends Declaration {
      */
     @SuppressWarnings("null") // immutablelist
     @Override
-    public SequenceDefinition createDefinition(
+    public ArrayDefinition createDefinition(
             IDefinitionScope definitionScope, String fieldName, BitBuffer input) throws CTFReaderException {
         Definition lenDef = null;
 
@@ -142,6 +142,11 @@ public class SequenceDeclaration extends Declaration {
             throw new CTFReaderException("Sequence length too long " + length); //$NON-NLS-1$
         }
 
+        if(isString()){
+            byte[] data = new byte[(int) length];
+            input.get(data);
+            return new FixedStringDefintion(this, definitionScope, fieldName, new String(data));
+        }
         Collection<String> collection = fPaths.get(fieldName);
         while (collection.size() < length) {
             fPaths.put(fieldName, fieldName + '[' + collection.size() + ']');
@@ -151,7 +156,7 @@ public class SequenceDeclaration extends Declaration {
         for (int i = 0; i < length; i++) {
             definitions.add(fElemType.createDefinition(definitionScope, paths.get(i), input));
         }
-        return new SequenceDefinition(this, definitionScope, fieldName, definitions.build());
+        return new CompoundDefinition(this, definitionScope, fieldName, definitions.build());
     }
 
     @Override

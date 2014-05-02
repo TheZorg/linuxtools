@@ -78,6 +78,7 @@ public class StructDeclarationTest {
     @Test
     public void testCreateDefinition() throws CTFReaderException {
         String fieldName = "";
+        @SuppressWarnings("null")
         BitBuffer bb = new BitBuffer(ByteBuffer.allocate(100));
         StructDefinition result = fixture.createDefinition(null, fieldName, bb);
         assertNotNull(result);

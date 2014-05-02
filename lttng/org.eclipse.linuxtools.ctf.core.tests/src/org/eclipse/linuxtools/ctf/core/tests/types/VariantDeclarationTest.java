@@ -140,6 +140,7 @@ public class VariantDeclarationTest {
         fixture.addField("a", IntegerDeclaration.UINT_64B_DECL);
         IDefinitionScope definitionScope = createDefinitionScope();
         String fieldName = "";
+        @SuppressWarnings("null")
         BitBuffer bb = new BitBuffer(ByteBuffer.allocate(100));
         VariantDefinition result = fixture.createDefinition(definitionScope, fieldName, bb);
 

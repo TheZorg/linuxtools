@@ -21,7 +21,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Map;
+import java.util.List;
 
 import org.eclipse.linuxtools.ctf.core.event.IEventDeclaration;
 import org.eclipse.linuxtools.ctf.core.trace.CTFReaderException;
@@ -509,8 +509,8 @@ public class IOstructgenTest {
         trace = new CTFTrace(tempTraceDir);
         assertNotNull(trace);
 
-        Map<Long, IEventDeclaration> events = trace.getEvents(0L);
-        final EventDeclaration eventDeclaration = (EventDeclaration) events.get(2L);
+        List<IEventDeclaration> events = trace.getEvents(0L);
+        final EventDeclaration eventDeclaration = (EventDeclaration) events.get(2);
         assertEquals("http://example.com/path_to_model?q=ust_tests_demo:done",
                 eventDeclaration.getCustomAttribute("model.emf.uri"));
     }

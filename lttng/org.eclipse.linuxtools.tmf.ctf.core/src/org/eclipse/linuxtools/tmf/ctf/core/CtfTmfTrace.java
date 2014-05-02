@@ -380,7 +380,33 @@ public class CtfTmfTrace extends TmfTrace
     }
 
     /**
+<<<<<<< HEAD
      * Gets the list of declared events
+=======
+     * Returns whether or not an event is in the metadata of the trace,
+     * therefore if it can possibly be in the trace. It does not verify whether
+     * or not the event is actually in the trace
+     *
+     * @param eventName
+     *            The name of the event to check
+     * @return Whether the event is in the metadata or not
+     * @since 2.1
+     */
+    public boolean hasEvent(final String eventName) {
+        List< IEventDeclaration> events = fTrace.getEvents(0L);
+        if (events != null) {
+            for (IEventDeclaration decl : events) {
+                if (decl.getName().equals(eventName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Return whether all requested events are in the metadata
+>>>>>>> 077dbd1... ctf: Lttng specific performance improvement
      *
      * @since 3.0
      */

@@ -19,8 +19,8 @@ import java.nio.ByteOrder;
 import org.eclipse.linuxtools.ctf.core.event.io.BitBuffer;
 import org.eclipse.linuxtools.ctf.core.event.scope.IDefinitionScope;
 import org.eclipse.linuxtools.ctf.core.event.types.ArrayDeclaration;
-import org.eclipse.linuxtools.ctf.core.event.types.ArrayDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.Encoding;
+import org.eclipse.linuxtools.ctf.core.event.types.ArrayDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.IDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.StringDeclaration;
@@ -77,6 +77,7 @@ public class ArrayDeclarationTest {
         ArrayDefinition result;
         byte[] array = { 't', 'e', 's', 't', '\0', 't', 'h', 'i', 's', '\0' };
         ByteBuffer byb = ByteBuffer.wrap(array);
+        @SuppressWarnings("null")
         BitBuffer bb = new BitBuffer(byb);
         result = fixture.createDefinition(definitionScope, fieldName, bb);
 

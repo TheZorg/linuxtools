@@ -19,6 +19,7 @@ import java.util.Date;
 import java.util.Vector;
 
 import org.eclipse.linuxtools.ctf.core.event.EventDefinition;
+import org.eclipse.linuxtools.ctf.core.tests.shared.CtfTestTrace;
 import org.eclipse.linuxtools.ctf.core.trace.CTFReaderException;
 import org.eclipse.linuxtools.ctf.core.trace.CTFTrace;
 import org.eclipse.linuxtools.ctf.core.trace.CTFTraceReader;
@@ -31,12 +32,12 @@ public class ReadTrace {
      * @throws FileNotFoundException
      */
     public static void main(String[] args) throws FileNotFoundException {
-        final String TRACE_PATH = "traces/kernel";
+        final String TRACE_PATH = CtfTestTrace.KERNEL.getPath();
 
         // Change this to enable text output
         final boolean USE_TEXT = false;
 
-        final int LOOP_COUNT = 10;
+        final int LOOP_COUNT = 20;
 
         // Work variables
         long nbEvent = 0L;

@@ -78,6 +78,7 @@ public class StringDeclarationTest {
     public void testCreateDefinition() throws CTFReaderException {
         IDefinitionScope definitionScope = null;
         String fieldName = "id";
+        @SuppressWarnings("null")
         BitBuffer bb = new BitBuffer(ByteBuffer.allocate(100));
         StringDefinition result = fixture.createDefinition(definitionScope,
                 fieldName, bb);

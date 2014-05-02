@@ -38,15 +38,15 @@ public class IntegerEndiannessTest {
     @NonNull private static final String name = "testInt";
     @NonNull private static final String clockName = "clock";
 
-    private ByteBuffer bb;
-    @NonNull private BitBuffer input = new BitBuffer(java.nio.ByteBuffer.allocate(0));
+    @SuppressWarnings("null")
+    @NonNull private ByteBuffer bb = java.nio.ByteBuffer.allocateDirect(8);
+    @NonNull private BitBuffer input = BitBuffer.EMPTY_BITBUFFER;
 
     /**
      * Set up the bit-buffer to be used
      */
     @Before
     public void setUp() {
-        bb = java.nio.ByteBuffer.allocateDirect(8);
         bb.put((byte) 0xab);
         bb.put((byte) 0xcd);
         bb.put((byte) 0xef);

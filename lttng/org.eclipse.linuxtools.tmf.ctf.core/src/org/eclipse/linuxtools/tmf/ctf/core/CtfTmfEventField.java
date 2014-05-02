@@ -24,11 +24,9 @@ import java.util.List;
 import org.eclipse.linuxtools.ctf.core.event.types.ArrayDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.Definition;
 import org.eclipse.linuxtools.ctf.core.event.types.EnumDefinition;
+import org.eclipse.linuxtools.ctf.core.event.types.FixedStringDefintion;
 import org.eclipse.linuxtools.ctf.core.event.types.FloatDefinition;
-import org.eclipse.linuxtools.ctf.core.event.types.IntegerDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDefinition;
-import org.eclipse.linuxtools.ctf.core.event.types.SequenceDeclaration;
-import org.eclipse.linuxtools.ctf.core.event.types.SequenceDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.StringDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.StructDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.VariantDefinition;
@@ -103,11 +101,8 @@ public abstract class CtfTmfEventField extends TmfEventField {
 
         } else if (fieldDef instanceof ArrayDefinition) {
             ArrayDefinition arrayDef = (ArrayDefinition) fieldDef;
-
-            if (arrayDef.getDeclaration().isString()) {
-                /* This is an array of UTF-8 bytes, a.k.a. a String! */
+            if (arrayDef instanceof FixedStringDefintion) {
                 field = new CTFStringField(fieldName, fieldDef.toString());
-
             } else {
                 /* Arrays of elements of any other type */
                 List<Definition> definitions = arrayDef.getDefinitions();
@@ -115,37 +110,17 @@ public abstract class CtfTmfEventField extends TmfEventField {
 
                 /* Parse the elements of the array. */
                 for (int i = 0; i < definitions.size(); i++) {
+                    final Definition definition = definitions.get(i);
                     CtfTmfEventField curField = CtfTmfEventField.parseField(
-                            definitions.get(i), fieldName + '[' + i + ']');
+                            definition, fieldName + '[' + i + ']');
                     elements[i] = curField;
                 }
 
                 field = new CTFArrayField(fieldName, elements);
             }
-        } else if (fieldDef instanceof SequenceDefinition) {
-            SequenceDefinition seqDef = (SequenceDefinition) fieldDef;
-            SequenceDeclaration seqDecl = seqDef.getDeclaration();
+        }
 
-            if (seqDef.getLength() == 0) {
-                /* Some sequences have length = 0. Simply use an empty string */
-                field = new CTFStringField(fieldName, ""); //$NON-NLS-1$
-            } else if (seqDecl.isString()) {
-                /* Interpret this sequence as a String */
-                field = new CTFStringField(fieldName, seqDef.toString());
-            } else if (seqDecl.getElementType() instanceof IntegerDeclaration) {
-                /* Sequence of integers => CTFIntegerArrayField */
-                long[] values = new long[seqDef.getLength()];
-                for (int i = 0; i < seqDef.getLength(); i++) {
-                    values[i] = ((IntegerDefinition) seqDef.getElem(i)).getValue();
-                }
-                field = new CTFIntegerArrayField(fieldName, values,
-                        ((IntegerDeclaration) seqDecl.getElementType()).getBase(),
-                        ((IntegerDeclaration) seqDecl.getElementType()).isSigned());
-
-            }
-            /* Add other Sequence types here */
-
-        } else if (fieldDef instanceof StructDefinition) {
+        else if (fieldDef instanceof StructDefinition) {
             StructDefinition strDef = (StructDefinition) fieldDef;
 
             List<ITmfEventField> list = new ArrayList<>();

@@ -132,8 +132,13 @@ public class ArrayDeclaration extends Declaration {
     public ArrayDefinition createDefinition(IDefinitionScope definitionScope,
             @NonNull String fieldName, BitBuffer input) throws CTFReaderException {
         alignRead(input);
+        if(isString()){
+            byte[] data = new byte[fLength];
+            input.get(data);
+            return new FixedStringDefintion(this, definitionScope, fieldName, new String(data));
+        }
         List<Definition> definitions = read(input, definitionScope, fieldName);
-        return new ArrayDefinition(this, definitionScope, fieldName, definitions);
+        return new CompoundDefinition(this, definitionScope, fieldName, definitions);
     }
 
     @Override

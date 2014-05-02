@@ -27,11 +27,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -42,8 +40,8 @@ import org.eclipse.linuxtools.ctf.core.event.IEventDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.io.BitBuffer;
 import org.eclipse.linuxtools.ctf.core.event.scope.IDefinitionScope;
 import org.eclipse.linuxtools.ctf.core.event.scope.LexicalScope;
-import org.eclipse.linuxtools.ctf.core.event.types.ArrayDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.Definition;
+import org.eclipse.linuxtools.ctf.core.event.types.ArrayDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.IntegerDefinition;
 import org.eclipse.linuxtools.ctf.core.event.types.StructDeclaration;
 import org.eclipse.linuxtools.ctf.core.event.types.StructDefinition;
@@ -241,14 +239,14 @@ public class CTFTrace implements IDefinitionScope, AutoCloseable {
     // ------------------------------------------------------------------------
 
     /**
-     * Gets an event declaration hash map for a given streamID
+     * Gets an event declaration collection for a given streamID
      *
      * @param streamId
      *            The ID of the stream from which to read
-     * @return The Hash map with the event declarations
-     * @since 2.0
+     * @return The list with the event declarations
+     * @since 3.0
      */
-    public Map<Long, IEventDeclaration> getEvents(Long streamId) {
+    public List<IEventDeclaration> getEvents(Long streamId) {
         return fStreams.get(streamId).getEvents();
     }
 
@@ -263,7 +261,7 @@ public class CTFTrace implements IDefinitionScope, AutoCloseable {
      * @since 2.0
      */
     public IEventDeclaration getEventType(long streamId, long id) {
-        return getEvents(streamId).get(id);
+        return getEvents(streamId).get((int) id);
     }
 
     /**
@@ -472,18 +470,11 @@ public class CTFTrace implements IDefinitionScope, AutoCloseable {
 
     private void addStream(StreamInput s) {
 
-        /*
-         * Copy the events
-         */
-        Iterator<Entry<Long, IEventDeclaration>> it = s.getStream()
-                .getEvents().entrySet().iterator();
-        while (it.hasNext()) {
-            Entry<Long, IEventDeclaration> pairs = it.next();
-            Long eventNum = pairs.getKey();
-            IEventDeclaration eventDec = pairs.getValue();
-            getEvents(s.getStream().getId()).put(eventNum, eventDec);
-        }
+        Long id = s.getStream().getId();
 
+        if( getEvents(id)== null) {
+            throw new IllegalStateException();
+        }
         /*
          * index the trace
          */
@@ -529,13 +520,15 @@ public class CTFTrace implements IDefinitionScope, AutoCloseable {
             /* Shouldn't happen at this stage if every other check passed */
             throw new CTFReaderException(e);
         }
-
+        if( byteBuffer == null ) {
+            throw new CTFReaderException("Buffer creation failed"); //$NON-NLS-1$
+        }
         /* Create a BitBuffer with this mapping and the trace byte order */
         streamBitBuffer = new BitBuffer(byteBuffer, this.getByteOrder());
 
         if (fPacketHeaderDecl != null) {
             /* Read the packet header */
-            fPacketHeaderDef = fPacketHeaderDecl.createDefinition(null, LexicalScope.PACKET_HEADER.getName(), streamBitBuffer);
+            fPacketHeaderDef = fPacketHeaderDecl.createDefinition(null, LexicalScope.PACKET_HEADER, streamBitBuffer);
 
             /* Check the magic number */
             IntegerDefinition magicDef = (IntegerDefinition) fPacketHeaderDef.lookupDefinition("magic"); //$NON-NLS-1$

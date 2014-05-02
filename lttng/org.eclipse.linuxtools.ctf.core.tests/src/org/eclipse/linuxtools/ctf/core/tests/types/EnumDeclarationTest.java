@@ -90,8 +90,8 @@ public class EnumDeclarationTest {
         IDefinitionScope definitionScope = null;
         String fieldName = "";
         byte[] array = { 't', 'e', 's', 't', '\0', 't', 'h', 'i', 's', '\0' };
-        ByteBuffer byb = ByteBuffer.wrap(array);
-        BitBuffer bb = new BitBuffer(byb);
+        @SuppressWarnings("null")
+        BitBuffer bb = new BitBuffer(ByteBuffer.wrap(array));
 
         EnumDefinition result = fixture.createDefinition(definitionScope,
                 fieldName, bb);

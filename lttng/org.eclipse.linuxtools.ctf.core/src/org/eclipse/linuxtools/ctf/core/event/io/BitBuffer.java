@@ -18,6 +18,7 @@ package org.eclipse.linuxtools.ctf.core.event.io;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.linuxtools.ctf.core.trace.CTFReaderException;
 
 /**
@@ -45,23 +46,24 @@ public final class BitBuffer {
     /** 64 bits to a long */
     public static final int BIT_LONG = 64;
 
+    /** A simple BitBuffer for cleanup
+     * @since 3.0 */
+    @SuppressWarnings("null")
+    @NonNull
+    public static final BitBuffer EMPTY_BITBUFFER = new BitBuffer(ByteBuffer.allocateDirect(0));
     // ------------------------------------------------------------------------
     // Attributes
     // ------------------------------------------------------------------------
 
-    private ByteBuffer fBuffer;
+    @NonNull
+    private final ByteBuffer fBuffer;
+    private final long fBitCapacity;
     private long fPosition;
     private ByteOrder fByteOrder;
 
     // ------------------------------------------------------------------------
     // Constructors
     // ------------------------------------------------------------------------
-    /**
-     * Default constructor, makes a big-endian buffer
-     */
-    public BitBuffer() {
-        this(null, ByteOrder.BIG_ENDIAN);
-    }
 
     /**
      * Constructor, makes a big-endian buffer
@@ -69,7 +71,7 @@ public final class BitBuffer {
      * @param buf
      *            the bytebuffer to read
      */
-    public BitBuffer(ByteBuffer buf) {
+    public BitBuffer(@NonNull ByteBuffer buf) {
         this(buf, ByteOrder.BIG_ENDIAN);
     }
 
@@ -81,10 +83,13 @@ public final class BitBuffer {
      * @param order
      *            the byte order (big-endian, little-endian, network?)
      */
-    public BitBuffer(ByteBuffer buf, ByteOrder order) {
-        setByteBuffer(buf);
+    public BitBuffer(@NonNull ByteBuffer buf, ByteOrder order) {
+        fBuffer = buf;
+        fBuffer.order(fByteOrder);
+        clear();
         setByteOrder(order);
         resetPosition();
+        fBitCapacity = fBuffer.capacity() * BIT_CHAR;
     }
 
     private void resetPosition() {
@@ -167,6 +172,19 @@ public final class BitBuffer {
         }
         long retVal = getInt(length, signed);
         return (signed ? retVal : (retVal & 0xFFFFFFFFL));
+    }
+
+    /**
+     * Get an array of bytes from the bitbuffer, 8 bit aligned
+     *
+     * @param data
+     *            the bytes to write to
+     * @since 3.0
+     */
+    public void get(@NonNull byte[] data) {
+        fBuffer.position((int) (fPosition/8));
+        fBuffer.get(data);
+        fPosition += data.length*8;
     }
 
     /**
@@ -558,14 +576,7 @@ public final class BitBuffer {
      * @return does the buffer have enough room to read the next "length"
      */
     public boolean canRead(int length) {
-        if (fBuffer == null) {
-            return false;
-        }
-
-        if ((fPosition + length) > (((long) fBuffer.capacity()) * BIT_CHAR)) {
-            return false;
-        }
-        return true;
+        return ((fPosition + length) <= fBitCapacity);
     }
 
     /**
@@ -576,9 +587,7 @@ public final class BitBuffer {
      */
     public void setByteOrder(ByteOrder order) {
         fByteOrder = order;
-        if (fBuffer != null) {
-            fBuffer.order(order);
-        }
+        fBuffer.order(order);
     }
 
     /**
@@ -601,7 +610,7 @@ public final class BitBuffer {
      */
     public void position(long newPosition) throws CTFReaderException {
 
-        if ((fBuffer != null) && (newPosition / 8) > fBuffer.capacity()) {
+        if (newPosition > fBitCapacity) {
             throw new CTFReaderException("Out of bounds exception on a position move, attempting to access position: " + newPosition); //$NON-NLS-1$
         }
         fPosition = newPosition;
@@ -619,20 +628,6 @@ public final class BitBuffer {
     }
 
     /**
-     * Sets the byte buffer
-     *
-     * @param buf
-     *            the byte buffer
-     */
-    public void setByteBuffer(ByteBuffer buf) {
-        fBuffer = buf;
-        if (buf != null) {
-            fBuffer.order(fByteOrder);
-        }
-        clear();
-    }
-
-    /**
      * Gets the byte buffer
      *
      * @return The byte buffer
@@ -646,9 +641,6 @@ public final class BitBuffer {
      */
     public void clear() {
         resetPosition();
-        if (fBuffer == null) {
-            return;
-        }
         fBuffer.clear();
     }
 

@@ -46,6 +46,7 @@ public class StringDefinitionTest {
         String name = "testString";
         StringDeclaration stringDec = new StringDeclaration();
         ByteBuffer byteBuffer = ByteBuffer.allocate(100);
+        @SuppressWarnings("null")
         BitBuffer bb = new BitBuffer(byteBuffer);
         byteBuffer.mark();
         testString = new String("testString");

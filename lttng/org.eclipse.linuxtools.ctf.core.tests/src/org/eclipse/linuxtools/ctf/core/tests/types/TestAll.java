@@ -36,7 +36,6 @@ import org.junit.runners.Suite;
     IntegerDefinitionTest.class,
     IntegerEndiannessTest.class,
     SequenceDeclarationTest.class,
-    SequenceDefinitionTest.class,
     StringDeclarationTest.class,
     StringDefinitionTest.class,
     StructDeclarationTest.class,
