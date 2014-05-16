@@ -14,11 +14,10 @@ package org.eclipse.linuxtools.internal.tmf.core.statesystem.backends.partial;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.CountDownLatch;
+import java.util.TreeSet;
 
 import org.eclipse.linuxtools.statesystem.core.ITmfStateSystem;
 import org.eclipse.linuxtools.statesystem.core.backend.IStateHistoryBackend;
@@ -74,13 +73,14 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
     private final IStateHistoryBackend innerHistory;
 
     /** Checkpoints map, <Timestamp, Rank in the trace> */
-    private final TreeMap<Long, Long> checkpoints = new TreeMap<>();
+    private final TreeSet<Long> checkpoints = new TreeSet<>();
 
     /** Latch tracking if the initial checkpoint registration is done */
-    private final CountDownLatch checkpointsReady = new CountDownLatch(1);
+//    private final CountDownLatch checkpointsReady = new CountDownLatch(1);
 
-    private final long granularity;
-    private final long fCheckpointQuark;
+//    private final long granularity;
+    private long fCheckpointQuark;
+    private boolean initialized = false;
 
     private long latestTime;
 
@@ -114,24 +114,19 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
         this.partialSS = pss;
 
         this.innerHistory = realBackend;
-        this.granularity = granularity;
-
-        fCheckpointQuark = partialSS.getQuarkAbsoluteAndAdd(AbstractTmfStateProvider.CHECKPOINT_NAME);
+//        this.granularity = granularity;
 
         latestTime = startTime;
 
-        fQuarksAdded = new boolean[partialSS.getNbAttributes()];
-        Arrays.fill(fQuarksAdded, Boolean.TRUE);
-
-        registerCheckpoints();
+        //registerCheckpoints();
 
     }
 
-    private void registerCheckpoints() {
-        ITmfEventRequest request = new CheckpointsRequest(partialInput, checkpoints);
-        partialInput.getTrace().sendRequest(request);
-        /* The request will countDown the checkpoints latch once it's finished */
-    }
+//    private void registerCheckpoints() {
+//        ITmfEventRequest request = new CheckpointsRequest(partialInput, checkpoints);
+//        partialInput.getTrace().sendRequest(request);
+//        /* The request will countDown the checkpoints latch once it's finished */
+//    }
 
     @Override
     public long getStartTime() {
@@ -146,10 +141,18 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
     @Override
     public void insertPastState(long stateStartTime, long stateEndTime,
             int quark, ITmfStateValue value) throws TimeRangeException {
+        if (!initialized) {
+            fCheckpointQuark = partialSS.getQuarkAbsoluteAndAdd(AbstractTmfStateProvider.CHECKPOINT_NAME);
+            fQuarksAdded = new boolean[partialSS.getNbAttributes()];
+            Arrays.fill(fQuarksAdded, Boolean.TRUE);
+            checkpoints.add(partialInput.getStartTime());
+            initialized = true;
+        }
         if( quark == fCheckpointQuark){
             fQuarksAdded = new boolean[partialSS.getNbAttributes()];
             Arrays.fill(fQuarksAdded, Boolean.TRUE);
-            // maybe return here
+            checkpoints.add(stateEndTime);
+            return;
         }
 
         /* Update the latest time */
@@ -161,7 +164,7 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
          * Check if the interval intersects the previous checkpoint. If so,
          * insert it in the real history back-end.
          */
-        if (fQuarksAdded[quark]) {
+        if ( quark < fQuarksAdded.length && fQuarksAdded[quark]) {
             fQuarksAdded[quark] = false;
             innerHistory.insertPastState(stateStartTime, stateEndTime, quark, value);
         }
@@ -201,7 +204,7 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
     public void doQuery(List<ITmfStateInterval> currentStateInfo, long t)
             throws TimeRangeException, StateSystemDisposedException {
         /* Wait for required steps to be done */
-        waitForCheckpoints();
+//        waitForCheckpoints();
         partialSS.getUpstreamSS().waitUntilBuilt();
 
         if (!checkValidTime(t)) {
@@ -209,7 +212,7 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
         }
 
         /* Reload the previous checkpoint */
-        long checkpointTime = checkpoints.floorKey(t);
+        long checkpointTime = checkpoints.floor(t);
         innerHistory.doQuery(currentStateInfo, checkpointTime);
 
         /*
@@ -266,7 +269,14 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
      */
     @Override
     public ITmfStateInterval doSingularQuery(long t, int attributeQuark) {
-        throw new UnsupportedOperationException();
+        List<ITmfStateInterval> fullState = new ArrayList<>();
+        try {
+            doQuery(fullState, t);
+        } catch (TimeRangeException | StateSystemDisposedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return fullState.get(attributeQuark);
     }
 
     @Override
@@ -279,60 +289,60 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
         // TODO Auto-generated method stub
     }
 
-    private void waitForCheckpoints() {
-        try {
-            checkpointsReady.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
+//    private void waitForCheckpoints() {
+//        try {
+//            checkpointsReady.await();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     // ------------------------------------------------------------------------
     // Event requests types
     // ------------------------------------------------------------------------
 
-    private class CheckpointsRequest extends TmfEventRequest {
-        private final ITmfTrace trace;
-        private final Map<Long, Long> checkpts;
-        private long eventCount;
-        private long lastCheckpointAt;
-
-        public CheckpointsRequest(ITmfStateProvider input, Map<Long, Long> checkpoints) {
-            super(input.getExpectedEventType(),
-                    TmfTimeRange.ETERNITY,
-                    0,
-                    ITmfEventRequest.ALL_DATA,
-                    ITmfEventRequest.ExecutionType.FOREGROUND);
-            checkpoints.clear();
-            this.trace = input.getTrace();
-            this.checkpts = checkpoints;
-            eventCount = 0;
-            lastCheckpointAt = 0;
-
-            /* Insert a checkpoint at the start of the trace */
-            checkpoints.put(input.getStartTime(), 0L);
-        }
-
-        @Override
-        public void handleData(final ITmfEvent event) {
-            super.handleData(event);
-            if (event.getTrace() == trace) {
-                eventCount++;
-
-                /* Check if we need to register a new checkpoint */
-                if (eventCount >= lastCheckpointAt + granularity) {
-                    checkpts.put(event.getTimestamp().getValue(), eventCount);
-                    lastCheckpointAt = eventCount;
-                }
-            }
-        }
-
-        @Override
-        public void handleCompleted() {
-            super.handleCompleted();
-            checkpointsReady.countDown();
-        }
-    }
+//    private class CheckpointsRequest extends TmfEventRequest {
+//        private final ITmfTrace trace;
+//        private final Map<Long, Long> checkpts;
+//        private long eventCount;
+//        private long lastCheckpointAt;
+//
+//        public CheckpointsRequest(ITmfStateProvider input, Map<Long, Long> checkpoints) {
+//            super(input.getExpectedEventType(),
+//                    TmfTimeRange.ETERNITY,
+//                    0,
+//                    ITmfEventRequest.ALL_DATA,
+//                    ITmfEventRequest.ExecutionType.FOREGROUND);
+//            checkpoints.clear();
+//            this.trace = input.getTrace();
+//            this.checkpts = checkpoints;
+//            eventCount = 0;
+//            lastCheckpointAt = 0;
+//
+//            /* Insert a checkpoint at the start of the trace */
+//            checkpoints.put(input.getStartTime(), 0L);
+//        }
+//
+//        @Override
+//        public void handleData(final ITmfEvent event) {
+//            super.handleData(event);
+//            if (event.getTrace() == trace) {
+//                eventCount++;
+//
+//                /* Check if we need to register a new checkpoint */
+//                if (eventCount >= lastCheckpointAt + granularity) {
+//                    checkpts.put(event.getTimestamp().getValue(), eventCount);
+//                    lastCheckpointAt = eventCount;
+//                }
+//            }
+//        }
+//
+//        @Override
+//        public void handleCompleted() {
+//            super.handleCompleted();
+//            checkpointsReady.countDown();
+//        }
+//    }
 
     private class PartialStateSystemRequest extends TmfEventRequest {
         private final ITmfStateProvider sci;
