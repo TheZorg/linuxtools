@@ -55,8 +55,8 @@ public class StateSystem implements ITmfStateSystemBuilder {
 
     /* References to the inner structures */
     private final AttributeTree attributeTree;
-    private final TransientState transState;
-    private final IStateHistoryBackend backend;
+    protected TransientState transState;
+    protected IStateHistoryBackend backend;
 
     /* Latch tracking if the state history is done building or not */
     private final CountDownLatch finishedLatch = new CountDownLatch(1);

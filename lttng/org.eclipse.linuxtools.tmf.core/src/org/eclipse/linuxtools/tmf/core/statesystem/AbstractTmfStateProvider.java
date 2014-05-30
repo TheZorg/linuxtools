@@ -41,7 +41,7 @@ import org.eclipse.linuxtools.tmf.core.trace.ITmfTrace;
  */
 public abstract class AbstractTmfStateProvider implements ITmfStateProvider {
 
-    private static final int DEFAULT_EVENTS_QUEUE_SIZE = 10000;
+    private static final int DEFAULT_EVENTS_QUEUE_SIZE = 131072;
 
     /**
      * The name of the attribute that will flip every n events
@@ -242,9 +242,8 @@ public abstract class AbstractTmfStateProvider implements ITmfStateProvider {
                             } catch (TimeRangeException | AttributeNotFoundException | StateValueTypeException e) {
                                 e.printStackTrace();
                             }
-                        } else {
-                            eventHandle(event);
                         }
+                        eventHandle(event);
                         rank++;
                     }
                     event = eventsQueue.take();

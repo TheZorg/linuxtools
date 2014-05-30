@@ -18,7 +18,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.eclipse.linuxtools.internal.statesystem.core.AttributeTree;
 import org.eclipse.linuxtools.internal.statesystem.core.StateSystem;
+import org.eclipse.linuxtools.internal.statesystem.core.TransientState;
 import org.eclipse.linuxtools.statesystem.core.ITmfStateSystem;
+import org.eclipse.linuxtools.statesystem.core.backend.InMemoryBackend;
 import org.eclipse.linuxtools.statesystem.core.backend.NullBackend;
 import org.eclipse.linuxtools.statesystem.core.exceptions.AttributeNotFoundException;
 import org.eclipse.linuxtools.statesystem.core.interval.ITmfStateInterval;
@@ -64,8 +66,15 @@ public class PartialStateSystem extends StateSystem {
      *            The real state system
      */
     public void assignUpstream(StateSystem ss) {
+        this.backend = new InMemoryBackend(ss.getStartTime());
+        this.transState = new TransientState(this.backend);
         realStateSystem = ss;
         ssAssignedLatch.countDown();
+    }
+
+    public void reset() {
+        this.backend = new InMemoryBackend(realStateSystem.getStartTime());
+        this.transState = new TransientState(this.backend);
     }
 
     ITmfStateSystem getUpstreamSS() {

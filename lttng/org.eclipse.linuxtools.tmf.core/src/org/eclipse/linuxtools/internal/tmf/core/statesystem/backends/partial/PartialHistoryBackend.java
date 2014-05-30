@@ -135,7 +135,8 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
 
     @Override
     public long getEndTime() {
-        return latestTime;
+//        return latestTime;
+        return innerHistory.getEndTime();
     }
 
     @Override
@@ -164,7 +165,10 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
          * Check if the interval intersects the previous checkpoint. If so,
          * insert it in the real history back-end.
          */
-        if ( quark < fQuarksAdded.length && fQuarksAdded[quark]) {
+        if ( quark >= fQuarksAdded.length || (quark < fQuarksAdded.length && fQuarksAdded[quark])) {
+            if (quark >= fQuarksAdded.length) {
+                fQuarksAdded = Arrays.copyOf(fQuarksAdded, partialSS.getNbAttributes());
+            }
             fQuarksAdded[quark] = false;
             innerHistory.insertPastState(stateStartTime, stateEndTime, quark, value);
         }
@@ -266,17 +270,96 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
     /**
      * Single queries are not supported in partial histories. To get the same
      * result you can do a full query, then call fullState.get(attribute).
+     * @throws StateSystemDisposedException
+     * @throws TimeRangeException
      */
     @Override
-    public ITmfStateInterval doSingularQuery(long t, int attributeQuark) {
-        List<ITmfStateInterval> fullState = new ArrayList<>();
+    public ITmfStateInterval doSingularQuery(long t, int attributeQuark)
+            throws TimeRangeException, StateSystemDisposedException {
+        partialSS.getUpstreamSS().waitUntilBuilt();
+        /* In previous checkpoint? */
+        long previousCheckpointTime = checkpoints.floor(t);
+        ITmfStateInterval interval = null;
         try {
-            doQuery(fullState, t);
-        } catch (TimeRangeException | StateSystemDisposedException e) {
-            // TODO Auto-generated catch block
+            interval = innerHistory.doSingularQuery(previousCheckpointTime, attributeQuark);
+            if (interval != null && interval.getEndTime() >= t) {
+                return interval;
+            }
+        } catch (AttributeNotFoundException e) {
+            // Not in this checkpoint, keep going
+        }
+
+        /* In next checkpoint? */
+        long nextCheckpointTime = checkpoints.ceiling(t+1);
+        try {
+            interval = innerHistory.doSingularQuery(nextCheckpointTime, attributeQuark);
+            if (interval != null && interval.getStartTime() <= t) {
+                return interval;
+            }
+        } catch (AttributeNotFoundException e) {
+         // Not in this checkpoint, keep going
+        }
+
+        /* In neither checkpoint, check partial state system backend */
+        try {
+            interval = partialSS.querySingleState(t, attributeQuark);
+            if (interval != null) {
+                return interval;
+            }
+        } catch (AttributeNotFoundException | TimeRangeException e) {
+         // Not in backend cache, keep going
+        }
+
+        /* Not in partial state backend, read all events between checkpoints */
+        int nbAttributes = partialSS.getNbAttributes();
+        List<ITmfStateInterval> currentStateInfo = new ArrayList<>(nbAttributes);
+        /* Bring the size of the array to the current number of attributes */
+        for (int i = 0; i < nbAttributes; i++) {
+            currentStateInfo.add(null);
+        }
+
+        /* Reload the previous checkpoint */
+        innerHistory.doQuery(currentStateInfo, previousCheckpointTime);
+
+        /*
+         * Set the initial contents of the partial state system (which is the
+         * contents of the query at the checkpoint).
+         */
+        partialSS.takeQueryLock();
+        partialSS.reset();
+        partialSS.replaceOngoingState(currentStateInfo);
+
+        /* Send an event request to update the state system to the target time. */
+        TmfTimeRange range = new TmfTimeRange(
+                /*
+                 * The state at the checkpoint already includes any state change
+                 * caused by the event(s) happening exactly at 'checkpointTime',
+                 * if any. We must not include those events in the query.
+                 */
+                new TmfTimestamp(previousCheckpointTime + 1, ITmfTimestamp.NANOSECOND_SCALE),
+                new TmfTimestamp(nextCheckpointTime, ITmfTimestamp.NANOSECOND_SCALE));
+        ITmfEventRequest request = new PartialStateSystemRequest(partialInput, range);
+        partialInput.getTrace().sendRequest(request);
+
+        try {
+            long start = System.nanoTime();
+            request.waitForCompletion();
+            long end = System.nanoTime();
+            System.out.println("Request took: " + (end - start) + "ns.");
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        return fullState.get(attributeQuark);
+
+        try {
+            interval = partialSS.querySingleState(t, attributeQuark);
+            // Don't forget to release the lock (should go in a finally)
+            partialSS.releaseQueryLock();
+            return interval;
+        } catch (AttributeNotFoundException e) {
+            // Shouldn't happen...
+        }
+        partialSS.releaseQueryLock();
+        return null;
     }
 
     @Override
@@ -347,15 +430,17 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
     private class PartialStateSystemRequest extends TmfEventRequest {
         private final ITmfStateProvider sci;
         private final ITmfTrace trace;
+        private final long endTime;
 
         PartialStateSystemRequest(ITmfStateProvider sci, TmfTimeRange range) {
             super(sci.getExpectedEventType(),
                     range,
                     0,
                     ITmfEventRequest.ALL_DATA,
-                    ITmfEventRequest.ExecutionType.BACKGROUND);
+                    ITmfEventRequest.ExecutionType.FOREGROUND);
             this.sci = sci;
             this.trace = sci.getTrace();
+            this.endTime = range.getEndTime().getValue();
         }
 
         @Override
@@ -377,7 +462,7 @@ public class PartialHistoryBackend implements IStateHistoryBackend {
                 ((AbstractTmfStateProvider) partialInput).waitForEmptyQueue();
             }
             super.handleCompleted();
+            partialSS.closeHistory(endTime);
         }
-
     }
 }
